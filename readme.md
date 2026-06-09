@@ -105,3 +105,44 @@ python manage.py runserver
 Осталось всего ничего: реализовать весь проект!
 
 Если в процессе разработки способ развертывания приложения поменяется, обновите `readme.md` с пометкой ревьюеру, как запускать и проверять приложение.
+
+---
+
+## 5. Текущий `.env`
+
+```
+DJANGO_SECRET_KEY=local-dev-secret-key-teamfinder-2024
+DJANGO_DEBUG=True
+
+POSTGRES_DB=team_finder
+POSTGRES_USER=team_finder
+POSTGRES_PASSWORD=team_finder
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+
+TASK_VERSION=1
+```
+
+---
+
+## 6. Тестовые пользователи
+
+Для проверки функциональности в базе созданы тестовые пользователи.  
+Все пароли: **pass1234**
+
+| Email | Пароль | Имя | Роль |
+|---|---|---|---|
+| alice@example.com | pass1234 | Алиса Петрова | Обычный пользователь |
+| bob@example.com | pass1234 | Борис Иванов | Обычный пользователь |
+| carol@example.com | pass1234 | Карина Смирнова | Обычный пользователь |
+| dmitry@example.com | pass1234 | Дмитрий Козлов | Обычный пользователь |
+| kate@example.com | pass1234 | Екатерина Новикова | Обычный пользователь |
+| misha@example.com | pass1234 | Михаил Соколов | Обычный пользователь |
+| olga@example.com | pass1234 | Ольга Лебедева | Обычный пользователь |
+| andrey@example.com | pass1234 | Андрей Волков | Обычный пользователь |
+| natasha@example.com | pass1234 | Наталья Морозова | Обычный пользователь |
+| sergey@example.com | pass1234 | Сергей Попов | Обычный пользователь |
+| nastya@example.com | pass1234 | Анастасия Федорова | Обычный пользователь |
+| **admin@example.com** | **admin1234** | **Админ Системный** | **Суперпользователь (is_staff=True)** |
+
+Суперпользователь имеет доступ к Django Admin: [http://localhost:8000/admin/](http://localhost:8000/admin/)
