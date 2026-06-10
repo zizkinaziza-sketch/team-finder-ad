@@ -1,34 +1,16 @@
-import re
-
 from django import forms
 from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError
 
-from .models import User
+from team_finder.utils import validate_github_url
 
-
-def normalize_phone(phone):
-    if phone.startswith("8"):
-        return "+7" + phone[1:]
-    return phone
-
-
-def validate_phone_format(phone):
-    pattern = re.compile(r"^(8\d{10}|\+7\d{10})$")
-    if not pattern.match(phone):
-        raise ValidationError(
-            "Телефон должен быть в формате 8XXXXXXXXXX или +7XXXXXXXXXX"
-        )
-
-
-def validate_github_url(url):
-    if url and "github.com" not in url:
-        raise ValidationError("URL должен быть на github.com")
+from .models import NAME_MAX_LENGTH, SURNAME_MAX_LENGTH, User
+from .utils import normalize_phone, validate_phone_format
 
 
 class RegisterForm(forms.Form):
-    name = forms.CharField(label="Имя", max_length=124)
-    surname = forms.CharField(label="Фамилия", max_length=124)
+    name = forms.CharField(label="Имя", max_length=NAME_MAX_LENGTH)
+    surname = forms.CharField(label="Фамилия", max_length=SURNAME_MAX_LENGTH)
     email = forms.EmailField(label="Email")
     password = forms.CharField(label="Пароль", widget=forms.PasswordInput)
 

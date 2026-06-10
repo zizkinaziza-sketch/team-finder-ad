@@ -1,10 +1,17 @@
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+
+from team_finder.utils import paginate
 
 from .forms import ChangePasswordForm, EditProfileForm, LoginForm, RegisterForm
 from .models import User
+
+FILTER_OWNERS_OF_FAVORITE_PROJECTS = "owners-of-favorite-projects"
+FILTER_OWNERS_OF_PARTICIPATING_PROJECTS = "owners-of-participating-projects"
+FILTER_INTERESTED_IN_MY_PROJECTS = "interested-in-my-projects"
+FILTER_PARTICIPANTS_OF_MY_PROJECTS = "participants-of-my-projects"
 
 
 def register_view(request):
@@ -12,7 +19,7 @@ def register_view(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user)
-        return redirect("/projects/list/")
+        return redirect("projects:list")
     return render(request, "users/register.html", {"form": form})
 
 
@@ -20,55 +27,47 @@ def login_view(request):
     form = LoginForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         login(request, form.cleaned_data["user"])
-        next_url = request.GET.get("next") or request.POST.get("next") or "/projects/list/"
+        next_url = (
+            request.GET.get("next")
+            or request.POST.get("next")
+            or reverse("projects:list")
+        )
         return redirect(next_url)
     return render(request, "users/login.html", {"form": form})
 
 
 def logout_view(request):
     logout(request)
-    return redirect("/projects/list/")
+    return redirect("projects:list")
 
 
 def user_list_view(request):
-    qs = User.objects.filter(is_active=True).order_by("id")
+    qs = User.objects.filter(is_active=True)
     active_filter = None
 
     if request.user.is_authenticated:
         active_filter = request.GET.get("filter")
-        if active_filter == "owners-of-favorite-projects":
-            fav_ids = request.user.favorites.values_list("id", flat=True)
-            qs = (
-                User.objects.filter(owned_projects__id__in=fav_ids)
-                .distinct()
-                .order_by("id")
-            )
-        elif active_filter == "owners-of-participating-projects":
-            part_ids = request.user.participated_projects.values_list("id", flat=True)
-            qs = (
-                User.objects.filter(owned_projects__id__in=part_ids)
-                .distinct()
-                .order_by("id")
-            )
-        elif active_filter == "interested-in-my-projects":
-            my_ids = request.user.owned_projects.values_list("id", flat=True)
-            qs = (
-                User.objects.filter(favorites__id__in=my_ids)
-                .distinct()
-                .order_by("id")
-            )
-        elif active_filter == "participants-of-my-projects":
-            my_ids = request.user.owned_projects.values_list("id", flat=True)
-            qs = (
-                User.objects.filter(participated_projects__id__in=my_ids)
-                .distinct()
-                .order_by("id")
-            )
+        if active_filter == FILTER_OWNERS_OF_FAVORITE_PROJECTS:
+            qs = User.objects.filter(
+                owned_projects__in=request.user.favorites.all()
+            ).distinct()
+        elif active_filter == FILTER_OWNERS_OF_PARTICIPATING_PROJECTS:
+            qs = User.objects.filter(
+                owned_projects__in=request.user.participated_projects.all()
+            ).distinct()
+        elif active_filter == FILTER_INTERESTED_IN_MY_PROJECTS:
+            qs = User.objects.filter(
+                favorites__in=request.user.owned_projects.all()
+            ).distinct()
+        elif active_filter == FILTER_PARTICIPANTS_OF_MY_PROJECTS:
+            qs = User.objects.filter(
+                participated_projects__in=request.user.owned_projects.all()
+            ).distinct()
         else:
             active_filter = None
 
-    paginator = Paginator(qs, 12)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    qs = qs.prefetch_related("owned_projects", "participated_projects").order_by("id")
+    page_obj = paginate(qs, request.GET.get("page"))
     query_prefix = f"filter={active_filter}&" if active_filter else ""
 
     return render(request, "users/participants.html", {
@@ -80,7 +79,11 @@ def user_list_view(request):
 
 
 def user_detail_view(request, user_id):
-    user = get_object_or_404(User, id=user_id, is_active=True)
+    user = get_object_or_404(
+        User.objects.prefetch_related("owned_projects__participants"),
+        id=user_id,
+        is_active=True,
+    )
     return render(request, "users/user-details.html", {"user": user})
 
 
@@ -92,7 +95,7 @@ def edit_profile_view(request):
     )
     if request.method == "POST" and form.is_valid():
         form.save()
-        return redirect(f"/users/{user.id}/")
+        return redirect("users:detail", user_id=user.id)
     return render(request, "users/edit_profile.html", {"form": form})
 
 
@@ -102,5 +105,5 @@ def change_password_view(request):
     if request.method == "POST" and form.is_valid():
         form.save()
         login(request, request.user)
-        return redirect(f"/users/{request.user.id}/")
+        return redirect("users:detail", user_id=request.user.id)
     return render(request, "users/change_password.html", {"form": form})
